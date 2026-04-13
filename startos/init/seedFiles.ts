@@ -6,6 +6,6 @@ export const seedFiles = sdk.setupOnInit(async (effects) => {
   await fulcrumConf.merge(effects, {})
   await bannerTxt.write(
     effects,
-    'Fulcrum BCH — Fast Electrum Server for Bitcoin Cash\n',
+    'Fulcrum BCH | Fast Electrum Server for Bitcoin Cash\n',
   )
 })

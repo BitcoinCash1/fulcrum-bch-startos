@@ -4,10 +4,10 @@ import { electrumPort, electrumInterfaceId } from './utils'
 export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
   const electrumMulti = sdk.MultiHost.of(effects, 'main')
   const electrumOrigin = await electrumMulti.bindPort(electrumPort, {
-    protocol: 'tcp',
+    protocol: null,
     preferredExternalPort: electrumPort,
-    addSsl: null,
     secure: { ssl: false },
+    addSsl: null,
   })
 
   const electrum = sdk.createInterface(effects, {
