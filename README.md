@@ -121,7 +121,7 @@ The sync progress health check parses Fulcrum's stdout for `<Controller>` messag
 | ------------------ | -------- | -------------------------------------- | -------------------------- | ------------------------------------ |
 | Bitcoin Cash Node  | Yes      | `main` → `/mnt/bitcoin-cash-node`     | Blockchain data + RPC      | txindex=true, prune=0, zmqEnabled=true |
 
-Bitcoin Cash Node must be running with version ≥ 29.0.0 and passing its primary health check.
+Bitcoin Cash Node latest release must be running and passing its primary health check.
 
 The BCHN `.cookie` or `store.json` at `/mnt/bitcoin-cash-node/store.json` is used for RPC authentication.
 
