@@ -1,17 +1,42 @@
-import { readFileSync } from 'fs'
 import { sdk } from './sdk'
 import { electrumPort } from './utils'
 import { fulcrumConf } from './file-models/fulcrum.conf'
 
 export const main = sdk.setupMain(async ({ effects }) => {
-  // Read BCHN RPC credentials from the mounted BCHN volume
+  const mounts = sdk.Mounts.of()
+    .mountVolume({
+      volumeId: 'main',
+      subpath: null,
+      mountpoint: '/data',
+      readonly: false,
+    })
+    .mountDependency({
+      dependencyId: 'bitcoin-cash-node',
+      volumeId: 'main',
+      subpath: null,
+      mountpoint: '/mnt/bitcoin-cash-node',
+      readonly: true,
+    })
+
+  // Create subcontainer first so we can exec into it to read BCHN's store.json
+  // (the dependency volume is only accessible inside the subcontainer, not in Node.js process)
+  const primarySub = await sdk.SubContainer.of(
+    effects,
+    { imageId: 'main' },
+    mounts,
+    'primary-sub',
+  )
+
+  // Read BCHN RPC credentials from the mounted dependency volume inside the subcontainer
   let rpcUser = 'bitcoin-cash-node'
   let rpcPassword = ''
   try {
-    const raw = readFileSync('/mnt/bitcoin-cash-node/store.json', 'utf8')
-    const store = JSON.parse(raw) as { rpcUser?: string; rpcPassword?: string }
-    rpcUser = store.rpcUser ?? rpcUser
-    rpcPassword = store.rpcPassword ?? rpcPassword
+    const result = await primarySub.exec(['cat', '/mnt/bitcoin-cash-node/store.json'])
+    if (result.exitCode === 0) {
+      const store = JSON.parse(result.stdout.toString()) as { rpcUser?: string; rpcPassword?: string }
+      rpcUser = store.rpcUser ?? rpcUser
+      rpcPassword = store.rpcPassword ?? rpcPassword
+    }
   } catch {
     console.warn('Could not read BCHN store.json — using defaults')
   }
@@ -23,25 +48,7 @@ export const main = sdk.setupMain(async ({ effects }) => {
 
   return sdk.Daemons.of(effects)
     .addDaemon('primary', {
-      subcontainer: await sdk.SubContainer.of(
-        effects,
-        { imageId: 'main' },
-        sdk.Mounts.of()
-          .mountVolume({
-            volumeId: 'main',
-            subpath: null,
-            mountpoint: '/data',
-            readonly: false,
-          })
-          .mountDependency({
-            dependencyId: 'bitcoin-cash-node',
-            volumeId: 'main',
-            subpath: null,
-            mountpoint: '/mnt/bitcoin-cash-node',
-            readonly: true,
-          }),
-        'primary-sub',
-      ),
+      subcontainer: primarySub,
       exec: {
         command: ['Fulcrum', '--ts-format', 'none', '/data/fulcrum.conf'],
         onStdout: (chunk) => {
