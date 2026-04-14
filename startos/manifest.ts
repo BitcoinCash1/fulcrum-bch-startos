@@ -4,12 +4,12 @@ export const manifest = setupManifest({
   id: 'fulcrum-bch',
   title: 'Fulcrum BCH',
   license: 'MIT',
-  packageRepo: 'https://github.com/CyberAshven/fulcrum-bch-startos',
+  packageRepo: 'https://github.com/BitcoinCash1/fulcrum-bch-startos',
   upstreamRepo: 'https://github.com/cculianu/Fulcrum',
   marketingUrl: 'https://github.com/cculianu/Fulcrum',
   donationUrl: null,
   docsUrls: [
-    'https://github.com/CyberAshven/fulcrum-bch-startos/blob/master/docs/instructions.md',
+    'https://github.com/BitcoinCash1/fulcrum-bch-startos/blob/master/docs/instructions.md',
     'https://github.com/cculianu/Fulcrum',
   ],
   description: {
@@ -41,7 +41,7 @@ export const manifest = setupManifest({
       optional: false,
       metadata: {
         title: 'Bitcoin Cash Node',
-        icon: 'https://raw.githubusercontent.com/CyberAshven/bitcoin-cash-node-startos/master/icon.png',
+        icon: 'https://raw.githubusercontent.com/BitcoinCash1/bitcoin-cash-node-startos/master/icon.png',
       },
     },
   },
