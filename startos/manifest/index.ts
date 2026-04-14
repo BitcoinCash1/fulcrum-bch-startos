@@ -1,4 +1,5 @@
 import { setupManifest } from '@start9labs/start-sdk'
+import { long, short } from './i18n'
 
 export const manifest = setupManifest({
   id: 'fulcrum-bch',
@@ -12,10 +13,7 @@ export const manifest = setupManifest({
     'https://github.com/BitcoinCash1/fulcrum-bch-startos/blob/master/docs/instructions.md',
     'https://github.com/cculianu/Fulcrum',
   ],
-  description: {
-    short: 'Fast Electrum server for Bitcoin Cash',
-    long: 'Fulcrum BCH is a fast, feature-complete SPV server for Bitcoin Cash powered by Cculianu\'s Fulcrum. It indexes the BCH blockchain via Bitcoin Cash Node and serves the Electrum protocol to BCH wallets and the BCH Explorer.',
-  },
+  description: { short, long },
   volumes: ['main'],
   images: {
     main: {
