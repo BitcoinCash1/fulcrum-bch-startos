@@ -37,7 +37,10 @@ export const manifest = setupManifest({
       description:
         'Bitcoin Cash Node is required with full indexing enabled. Pruning must be disabled and txindex must be active for Fulcrum BCH to function properly.',
       optional: false,
-      s9pk: null,
+      metadata: {
+        title: 'Bitcoin Cash Node',
+        icon: 'https://raw.githubusercontent.com/CyberAshven/bitcoin-cash-node-startos/master/icon.png',
+      },
     },
   },
 })
