@@ -4,6 +4,7 @@ import { sdk } from '../sdk'
 export const shape = z
   .object({
     nodePackageId: z.string().catch('bitcoincashd'),
+    nodeConfirmed: z.boolean().catch(true),
   })
   .strip()
 
