@@ -8,18 +8,16 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
   const nodePackageId = store?.nodePackageId ?? 'bitcoincashd'
 
   if (nodePackageId === 'bchd') {
-    // BCHD always has txindex and no pruning; ZMQ is not supported but Fulcrum works without it
+    // BCHD always has txindex; just ensure pruning is disabled
     await sdk.action.createTask(effects, 'bchd', bchdAutoconfig, 'critical', {
       input: {
         kind: 'partial',
         value: {
           prune: 0,
-          txindex: true,
-          zmqEnabled: false,
         },
       },
       reason:
-        'Pruning must be disabled and txindex must be enabled for Fulcrum to function properly.',
+        'Pruning must be disabled for Fulcrum to function properly.',
       when: { condition: 'input-not-matches', once: false },
     })
   } else {
