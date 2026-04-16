@@ -2,38 +2,40 @@ import { autoconfig as bchnAutoconfig } from 'bitcoin-cash-node-startos/startos/
 import { autoconfig as bchdAutoconfig } from 'bitcoin-cash-daemon-startos/startos/actions/config/autoconfig'
 import { sdk } from './sdk'
 import { storeJson } from './file-models/store.json'
-import { selectNode } from './actions/selectNode'
 
-const SELECT_NODE_REPLAY_ID = 'select-node'
-const BCHN_AUTOCONFIG_REPLAY_ID = 'bitcoincashd-autoconfig'
-const BCHD_AUTOCONFIG_REPLAY_ID = 'bchd-autoconfig'
-
+/**
+ * Modeled on official Start9 Fulcrum BTC pattern (v2.1.0_7).
+ *
+ * Key differences from the BTC version:
+ *   - We support two backends (BCHN / BCHD) selected at runtime.
+ *   - Before creating the active backend's task we purge every
+ *     stale replay-ID variant that previous builds may have left behind.
+ *   - We do NOT supply an explicit replayId to createTask so the SDK
+ *     generates the canonical  `<packageId>:autoconfig`  form.
+ */
 export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
   const store = await storeJson.read().const(effects)
   const nodePackageId = store?.nodePackageId ?? 'bitcoincashd'
 
-  if (!store?.nodeConfirmed) {
-    await sdk.action.clearTask(
-      effects,
-      BCHN_AUTOCONFIG_REPLAY_ID,
-      BCHD_AUTOCONFIG_REPLAY_ID,
-    )
-    await sdk.action.createOwnTask(effects, selectNode, 'critical', {
-      replayId: SELECT_NODE_REPLAY_ID,
-      reason: 'Confirm which BCH node package ID should back this Fulcrum instance',
-    })
+  // ── Purge every known stale task ──────────────────────────────
+  // SDK auto-generates replay IDs as  `<pkgId>:autoconfig`  (colon).
+  // Older builds of this package used the dash variants and a
+  // manual  `select-node`  task.  Wipe them all so nothing ghosts.
+  await sdk.action.clearTask(
+    effects,
+    // canonical colon format (created by SDK when no replayId given)
+    'bitcoincashd:autoconfig',
+    'bchd:autoconfig',
+    // legacy dash format (created by earlier fulcrum-bch builds)
+    'bitcoincashd-autoconfig',
+    'bchd-autoconfig',
+    // legacy select-node task
+    'select-node',
+  )
 
-    return {}
-  }
-
+  // ── Create only the task for the selected backend ─────────────
   if (nodePackageId === 'bchd') {
-    await sdk.action.clearTask(
-      effects,
-      SELECT_NODE_REPLAY_ID,
-      BCHN_AUTOCONFIG_REPLAY_ID,
-    )
     await sdk.action.createTask(effects, 'bchd', bchdAutoconfig, 'critical', {
-      replayId: BCHD_AUTOCONFIG_REPLAY_ID,
       input: {
         kind: 'partial',
         value: {
@@ -43,7 +45,7 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
         },
       },
       reason:
-        'Pruning must be disabled, txindex must be enabled, and gRPC must be enabled for Fulcrum to function properly.',
+        'Pruning must be disabled and txindex must be enabled for Fulcrum to function properly.',
       when: { condition: 'input-not-matches', once: false },
     })
 
@@ -56,25 +58,26 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
     } as any
   }
 
-  await sdk.action.clearTask(
+  // Default: BCHN
+  await sdk.action.createTask(
     effects,
-    SELECT_NODE_REPLAY_ID,
-    BCHD_AUTOCONFIG_REPLAY_ID,
-  )
-  await sdk.action.createTask(effects, nodePackageId, bchnAutoconfig, 'critical', {
-    replayId: BCHN_AUTOCONFIG_REPLAY_ID,
-    input: {
-      kind: 'partial',
-      value: {
-        prune: 0,
-        txindex: true,
-        zmqEnabled: true,
+    nodePackageId,
+    bchnAutoconfig,
+    'critical',
+    {
+      input: {
+        kind: 'partial',
+        value: {
+          prune: 0,
+          txindex: true,
+          zmqEnabled: true,
+        },
       },
+      reason:
+        'Pruning must be disabled, txindex and ZMQ must be enabled for Fulcrum to function properly.',
+      when: { condition: 'input-not-matches', once: false },
     },
-    reason:
-      'Pruning must be disabled, transaction index and ZMQ must be enabled for Fulcrum to function properly.',
-    when: { condition: 'input-not-matches', once: false },
-  })
+  )
 
   return {
     [nodePackageId]: {
