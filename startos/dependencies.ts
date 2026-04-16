@@ -14,7 +14,7 @@ import { storeJson } from './file-models/store.json'
  *     generates the canonical  `<packageId>:autoconfig`  form.
  */
 export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
-  const store = await storeJson.read().const(effects)
+  const store = await storeJson.read().once()
   const nodePackageId = store?.nodePackageId ?? 'bitcoincashd'
 
   // ── Purge every known stale task ──────────────────────────────
@@ -39,7 +39,6 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
       input: {
         kind: 'partial',
         value: {
-          prune: 0,
           txindex: true,
           grpcEnabled: true,
         },
@@ -68,7 +67,6 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
       input: {
         kind: 'partial',
         value: {
-          prune: 0,
           txindex: true,
           zmqEnabled: true,
         },
