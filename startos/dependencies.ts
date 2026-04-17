@@ -14,7 +14,7 @@ import { storeJson } from './file-models/store.json'
  *     generates the canonical  `<packageId>:autoconfig`  form.
  */
 export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
-  const store = await storeJson.read().once()
+  const store = await storeJson.read().const(effects)
   const nodePackageId = store?.nodePackageId ?? 'bitcoincashd'
 
   // ── Purge every known stale task ──────────────────────────────
@@ -31,6 +31,8 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
     'bchd-autoconfig',
     // legacy select-node task
     'select-node',
+    // stale typo from earlier builds (wrong package ID)
+    'bitcoincash:autoconfig',
   )
 
   // ── Create only the task for the selected backend ─────────────
