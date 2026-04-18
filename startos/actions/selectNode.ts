@@ -41,9 +41,16 @@ export const selectNode = sdk.Action.withInput(
   },
 
   async ({ effects, input }) => {
+    const previous = await storeJson.read().once()
+    const changed = previous?.nodePackageId !== input.nodePackageId
+
     await storeJson.merge(effects, {
       nodePackageId: input.nodePackageId,
       nodeConfirmed: true,
     })
+
+    if (changed) {
+      await effects.restart()
+    }
   },
 )

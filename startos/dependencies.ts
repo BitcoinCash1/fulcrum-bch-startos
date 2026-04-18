@@ -78,7 +78,7 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
     return {
       flowee: {
         kind: 'running',
-        versionRange: '>=1.0.0:0',
+        versionRange: '>=2026.2.0:0',
         healthChecks: ['primary'],
       },
     } as any
