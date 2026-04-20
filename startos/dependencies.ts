@@ -16,7 +16,10 @@ import { storeJson } from './file-models/store.json'
  */
 export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
   const store = await storeJson.read().const(effects)
-  const nodePackageId = store?.nodePackageId ?? 'bitcoincashd'
+  const selectedNodePackageId = store?.nodePackageId ?? 'bitcoincashd'
+  const nodePackageId = ['bitcoincashd', 'bchd', 'flowee'].includes(selectedNodePackageId)
+    ? selectedNodePackageId
+    : 'bitcoincashd'
 
   // ── Purge every known stale task ──────────────────────────────
   // SDK auto-generates replay IDs as  `<pkgId>:autoconfig`  (colon).
@@ -45,6 +48,7 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
         kind: 'partial',
         value: {
           txindex: true,
+          prune: 0,
           grpcEnabled: true,
         },
       },
