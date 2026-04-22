@@ -8,6 +8,7 @@ export const shape = z.object({
   bitcoind: z.string().catch('bitcoincashd.startos:8332'),
   rpcuser: z.string().catch(''),
   rpcpassword: z.string().catch(''),
+  bitcoind_tls: z.boolean().catch(false),
   tcp: z.literal('0.0.0.0:50001').catch('0.0.0.0:50001'),
   peering: z.literal(false).catch(false),
   announce: z.literal(false).catch(false),

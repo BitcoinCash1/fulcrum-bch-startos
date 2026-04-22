@@ -48,11 +48,16 @@ export const main = sdk.setupMain(async ({ effects }) => {
     console.warn('Could not read node store.json — using defaults')
   }
 
-  // Inject credentials into fulcrum.conf before starting the daemon
+  // Inject credentials into fulcrum.conf before starting the daemon.
+  // BCHD serves RPC over TLS (self-signed cert); Fulcrum's `bitcoind-tls`
+  // enables HTTPS on the bitcoind side and accepts self-signed certs by
+  // default. BCHN serves plaintext JSON-RPC, so TLS must stay off there.
+  const bitcoindTls = nodePackageId === 'bchd'
   await fulcrumConf.merge(effects, {
     bitcoind: nodeHost,
     rpcuser: rpcUser,
     rpcpassword: rpcPassword,
+    bitcoind_tls: bitcoindTls,
   })
 
   let lastSyncLog: string | null = null
