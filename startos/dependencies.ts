@@ -50,7 +50,7 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
           txindex: true,
           prune: 0,
           grpcEnabled: true,
-        },
+        } as any,
       },
       reason:
         'Pruning must be disabled and txindex must be enabled for Fulcrum to function properly.',
@@ -60,7 +60,7 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
     return {
       bchd: {
         kind: 'running',
-        versionRange: '>=0.21.1:0',
+        versionRange: '>=0.22.0:0',
         healthChecks: ['primary'],
       },
     } as any
@@ -72,7 +72,7 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
         kind: 'partial',
         value: {
           rest: true,
-        },
+        } as any,
       },
       reason:
         'REST API must be enabled for Fulcrum to function properly.',
@@ -100,7 +100,7 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
         value: {
           txindex: true,
           zmqEnabled: true,
-        },
+        } as any,
       },
       reason:
         'Pruning must be disabled, txindex and ZMQ must be enabled for Fulcrum to function properly.',
