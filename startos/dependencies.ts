@@ -46,11 +46,12 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
     await sdk.action.createTask(effects, 'bchd', bchdAutoconfig, 'critical', {
       input: {
         kind: 'partial',
+        // @ts-ignore
         value: {
           txindex: true,
           prune: 0,
           grpcEnabled: true,
-        } as any,
+        },
       },
       reason:
         'Pruning must be disabled and txindex must be enabled for Fulcrum to function properly.',
@@ -70,9 +71,10 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
     await sdk.action.createTask(effects, 'flowee', floweeAutoconfig, 'critical', {
       input: {
         kind: 'partial',
+        // @ts-ignore
         value: {
           rest: true,
-        } as any,
+        },
       },
       reason:
         'REST API must be enabled for Fulcrum to function properly.',
@@ -97,10 +99,11 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
     {
       input: {
         kind: 'partial',
+        // @ts-ignore
         value: {
           txindex: true,
           zmqEnabled: true,
-        } as any,
+        },
       },
       reason:
         'Pruning must be disabled, txindex and ZMQ must be enabled for Fulcrum to function properly.',
