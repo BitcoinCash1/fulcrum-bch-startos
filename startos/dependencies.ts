@@ -17,7 +17,7 @@ import { storeJson } from './file-models/store.json'
 export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
   const store = await storeJson.read().const(effects)
   const selectedNodePackageId = store?.nodePackageId ?? 'bitcoincashd'
-  const nodePackageId = ['bitcoincashd', 'bchd', 'flowee'].includes(selectedNodePackageId)
+  const nodePackageId = ['bitcoincashd', 'bchd', 'flowee', 'knuth-bch'].includes(selectedNodePackageId)
     ? selectedNodePackageId
     : 'bitcoincashd'
 
@@ -31,10 +31,12 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
     'bitcoincashd:autoconfig',
     'bchd:autoconfig',
     'flowee:autoconfig',
+    'knuth-bch:autoconfig',
     // legacy dash format (created by earlier fulcrum-bch builds)
     'bitcoincashd-autoconfig',
     'bchd-autoconfig',
     'flowee-autoconfig',
+    'knuth-bch-autoconfig',
     // legacy select-node task
     'select-node',
     // stale typo from earlier builds (wrong package ID)
@@ -85,6 +87,21 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
       flowee: {
         kind: 'running',
         versionRange: '>=2026.2.0:0',
+        healthChecks: ['primary'],
+      },
+    } as any
+  }
+
+  if (nodePackageId === 'knuth-bch') {
+    // Knuth does not expose JSON-RPC yet (upstream roadmap, port 8332,
+    // BCHN-compatible when shipped). We declare the dep so users can
+    // pre-select it; Fulcrum will fail at RPC handshake with a clear
+    // error until upstream RPC ships. No autoconfig task: there is
+    // nothing RPC-relevant to configure today.
+    return {
+      'knuth-bch': {
+        kind: 'running',
+        versionRange: '>=0.80.0:0',
         healthChecks: ['primary'],
       },
     } as any
