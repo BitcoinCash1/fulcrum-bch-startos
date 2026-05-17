@@ -10,14 +10,14 @@ export const manifest = setupManifest({
   marketingUrl: 'https://github.com/cculianu/Fulcrum',
   donationUrl: null,
   docsUrls: [
-    'https://github.com/BitcoinCash1/fulcrum-bch-startos/blob/master/docs/instructions.md',
+    'https://github.com/BitcoinCash1/fulcrum-bch-startos/blob/master/instructions.md',
     'https://github.com/cculianu/Fulcrum',
   ],
   description: { short, long },
   volumes: ['main'],
   images: {
     main: {
-      source: { dockerTag: 'cculianu/fulcrum:v2.1.0' },
+      source: { dockerTag: 'cculianu/fulcrum:v2.1.1' },
       arch: ['x86_64', 'aarch64'],
       emulateMissingAs: 'x86_64',
     },
