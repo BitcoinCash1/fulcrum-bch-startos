@@ -55,6 +55,72 @@ export const main = sdk.setupMain(async ({ effects }) => {
     console.warn('Could not read node store.json — using defaults')
   }
 
+  // Process any pending delete-network-data action signals written by the action handler.
+  // The action writes /data/.delete-<network>; we delete the network dir and remove the signal.
+  await primarySub.exec([
+    'sh', '-c',
+    `for net in mainnet chipnet testnet4 testnet3 scalenet regtest; do
+       SIGNAL="/data/.delete-$net"
+       NETDIR="/data/$net"
+       if [ -f "$SIGNAL" ]; then
+         echo "[fulcrum-delete] Deleting $NETDIR/ per user request"
+         rm -rf "$NETDIR"
+         rm -f "$SIGNAL"
+         echo "[fulcrum-delete] Done"
+       fi
+     done`,
+  ])
+
+  // One-time migration: if the network-specific subdir is empty but the flat /data/
+  // directory has Fulcrum DB files tagged for this network (pre-2.1.1:2 layout),
+  // move them into the subdir so Fulcrum can resume without a full re-sync.
+  // /data/.network records the network of the flat data; we only migrate if it matches.
+  await primarySub.exec([
+    'sh', '-c',
+    `NETDIR="/data/${nodeNetwork}"
+     NETFILE="/data/.network"
+     mkdir -p "$NETDIR"
+     # Tag the flat data's network if not already tagged (first run with 2.1.1:2)
+     if [ ! -f "$NETFILE" ]; then
+       # Peek at whether there is any flat DB data at all before tagging
+       HAS_FLAT=$(find /data -maxdepth 1 -mindepth 1 \
+         -not -name "fulcrum.conf" -not -name "banner.txt" \
+         -not -name ".network" -not -name ".delete-*" \
+         -not -name "mainnet" -not -name "chipnet" -not -name "testnet4" \
+         -not -name "testnet3" -not -name "scalenet" -not -name "regtest" \
+         2>/dev/null | head -1)
+       if [ -n "$HAS_FLAT" ]; then
+         # Flat data exists but no tag — tag it with current network (first boot after upgrade)
+         echo "${nodeNetwork}" > "$NETFILE"
+         echo "[fulcrum-migrate] Tagged existing flat /data/ data as ${nodeNetwork}"
+       fi
+     fi
+     # Now attempt migration only if tags match and network subdir is empty
+     if [ -f "$NETFILE" ] && [ "$(cat "$NETFILE")" = "${nodeNetwork}" ] && [ -z "$(ls -A "$NETDIR" 2>/dev/null)" ]; then
+       HAS_DATA=$(find /data -maxdepth 1 -mindepth 1 \
+         -not -name "fulcrum.conf" -not -name "banner.txt" \
+         -not -name ".network" -not -name ".delete-*" \
+         -not -name "mainnet" -not -name "chipnet" -not -name "testnet4" \
+         -not -name "testnet3" -not -name "scalenet" -not -name "regtest" \
+         2>/dev/null | head -1)
+       if [ -n "$HAS_DATA" ]; then
+         echo "[fulcrum-migrate] Moving flat /data/ index (${nodeNetwork}) into $NETDIR/"
+         find /data -maxdepth 1 -mindepth 1 \
+           -not -name "fulcrum.conf" -not -name "banner.txt" \
+           -not -name ".network" -not -name ".delete-*" \
+           -not -name "mainnet" -not -name "chipnet" -not -name "testnet4" \
+           -not -name "testnet3" -not -name "scalenet" -not -name "regtest" \
+           -exec mv {} "$NETDIR/" \\;
+         rm -f "$NETFILE"
+         echo "[fulcrum-migrate] Done — Fulcrum will resume from existing index"
+       fi
+     elif [ -z "$(ls -A "$NETDIR" 2>/dev/null)" ]; then
+       echo "[fulcrum-start] No existing data for ${nodeNetwork} — fresh sync"
+     else
+       echo "[fulcrum-start] Resuming existing index at $NETDIR"
+     fi`,
+  ])
+
   // Inject credentials and per-network datadir into fulcrum.conf before starting.
   // Each network gets its own subdirectory so mainnet/chipnet/testnet4 data never mixes.
   // BCHD serves RPC over TLS; BCHN uses plaintext JSON-RPC.
