@@ -4,7 +4,7 @@ import { sdk } from '../sdk'
 const iniNumber = z.union([z.string().transform(Number), z.number()])
 
 export const shape = z.object({
-  datadir: z.literal('/data').catch('/data'),
+  datadir: z.string().catch('/data'),
   bitcoind: z.string().catch('bitcoincashd.startos:8332'),
   rpcuser: z.string().catch(''),
   rpcpassword: z.string().catch(''),

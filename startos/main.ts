@@ -34,30 +34,37 @@ export const main = sdk.setupMain(async ({ effects }) => {
     'primary-sub',
   )
 
-  // Read node RPC credentials from the mounted dependency volume inside the subcontainer
+  // Read node RPC credentials and network from the mounted dependency volume.
+  // Network is derived from the node — Fulcrum follows whatever network the node is on.
   let rpcUser = nodePackageId
   let rpcPassword = ''
+  let nodeNetwork = 'mainnet'
   try {
     const result = await primarySub.exec(['cat', '/mnt/node/store.json'])
     if (result.exitCode === 0) {
-      const store = JSON.parse(result.stdout.toString()) as { rpcUser?: string; rpcPassword?: string }
-      rpcUser = store.rpcUser ?? rpcUser
-      rpcPassword = store.rpcPassword ?? rpcPassword
+      const nodeStore = JSON.parse(result.stdout.toString()) as {
+        rpcUser?: string
+        rpcPassword?: string
+        network?: string
+      }
+      rpcUser = nodeStore.rpcUser ?? rpcUser
+      rpcPassword = nodeStore.rpcPassword ?? rpcPassword
+      nodeNetwork = nodeStore.network ?? nodeNetwork
     }
   } catch {
     console.warn('Could not read node store.json — using defaults')
   }
 
-  // Inject credentials into fulcrum.conf before starting the daemon.
-  // BCHD serves RPC over TLS (self-signed cert); Fulcrum's `bitcoind-tls`
-  // enables HTTPS on the bitcoind side and accepts self-signed certs by
-  // default. BCHN serves plaintext JSON-RPC, so TLS must stay off there.
+  // Inject credentials and per-network datadir into fulcrum.conf before starting.
+  // Each network gets its own subdirectory so mainnet/chipnet/testnet4 data never mixes.
+  // BCHD serves RPC over TLS; BCHN uses plaintext JSON-RPC.
   const bitcoindTls = nodePackageId === 'bchd'
   await fulcrumConf.merge(effects, {
     bitcoind: nodeHost,
     rpcuser: rpcUser,
     rpcpassword: rpcPassword,
     bitcoind_tls: bitcoindTls,
+    datadir: `/data/${nodeNetwork}`,
   })
 
   let lastSyncLog: string | null = null
