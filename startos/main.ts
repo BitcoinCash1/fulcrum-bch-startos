@@ -139,7 +139,29 @@ export const main = sdk.setupMain(async ({ effects }) => {
     .addDaemon('primary', {
       subcontainer: primarySub,
       exec: {
-        command: ['Fulcrum', '--ts-format', 'none', '/data/fulcrum.conf'],
+        // Wrap Fulcrum in a shell that monitors the node's network every 15s.
+        // If the node switches networks, we exit (code 1) so StartOS restarts the
+        // container; on the next startup, main.ts re-reads store.json and opens the
+        // correct per-network datadir.
+        command: [
+          'sh', '-c',
+          [
+            `Fulcrum --ts-format none /data/fulcrum.conf &`,
+            `FPID=$!`,
+            `EXPECTED='${nodeNetwork}'`,
+            `while kill -0 "$FPID" 2>/dev/null; do`,
+            `  sleep 15`,
+            `  CURRENT=$(sed -n 's/.*"network"[[:space:]]*:[[:space:]]*"\\([^"]*\\)".*/\\1/p' /mnt/node/store.json 2>/dev/null)`,
+            `  if [ -n "$CURRENT" ] && [ "$CURRENT" != "$EXPECTED" ]; then`,
+            `    echo "[net-monitor] Node network changed from $EXPECTED to $CURRENT -- restarting Fulcrum on new network"`,
+            `    kill "$FPID" 2>/dev/null`,
+            `    wait "$FPID" 2>/dev/null`,
+            `    exit 1`,
+            `  fi`,
+            `done`,
+            `wait "$FPID"; exit $?`,
+          ].join('\n'),
+        ],
         onStdout: (chunk) => {
           const text = Buffer.isBuffer(chunk)
             ? chunk.toString('utf8')
