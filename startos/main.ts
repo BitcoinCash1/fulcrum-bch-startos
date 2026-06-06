@@ -36,23 +36,42 @@ export const main = sdk.setupMain(async ({ effects }) => {
 
   // Read node RPC credentials and network from the mounted dependency volume.
   // Network is derived from the node — Fulcrum follows whatever network the node is on.
+  // We read twice (5 s apart) because LXC bind-mounts take a few seconds to propagate
+  // after the subcontainer is created; the first read can return stale data from a
+  // previously-mounted dependency (e.g. flowee on chipnet) even though the new
+  // dependency (e.g. bitcoincashd on mainnet) is already the configured one.
   let rpcUser = nodePackageId
   let rpcPassword = ''
   let nodeNetwork = 'mainnet'
-  try {
-    const result = await primarySub.exec(['cat', '/mnt/node/store.json'])
-    if (result.exitCode === 0) {
-      const nodeStore = JSON.parse(result.stdout.toString()) as {
-        rpcUser?: string
-        rpcPassword?: string
-        network?: string
+  const readNodeStore = async () => {
+    try {
+      const result = await primarySub.exec(['cat', '/mnt/node/store.json'])
+      if (result.exitCode === 0) {
+        return JSON.parse(result.stdout.toString()) as {
+          rpcUser?: string
+          rpcPassword?: string
+          network?: string
+        }
       }
-      rpcUser = nodeStore.rpcUser ?? rpcUser
-      rpcPassword = nodeStore.rpcPassword ?? rpcPassword
-      nodeNetwork = nodeStore.network ?? nodeNetwork
+    } catch {}
+    return null
+  }
+  const store1 = await readNodeStore()
+  if (store1) {
+    rpcUser = store1.rpcUser ?? rpcUser
+    rpcPassword = store1.rpcPassword ?? rpcPassword
+    nodeNetwork = store1.network ?? nodeNetwork
+  } else {
+    console.warn('Could not read node store.json (attempt 1) — using defaults')
+  }
+  // Wait for mount to settle, then re-read network (credentials don't change)
+  await new Promise<void>(r => setTimeout(r, 5000))
+  const store2 = await readNodeStore()
+  if (store2?.network) {
+    if (store2.network !== nodeNetwork) {
+      console.log(`[node-store] Network settled to ${store2.network} (was ${nodeNetwork} on first read)`)
     }
-  } catch {
-    console.warn('Could not read node store.json — using defaults')
+    nodeNetwork = store2.network
   }
 
   // Process any pending delete-network-data action signals written by the action handler.
