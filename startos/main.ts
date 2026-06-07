@@ -8,7 +8,6 @@ export const main = sdk.setupMain(async ({ effects }) => {
 
   const store = await storeJson.read().once()
   const nodePackageId = store?.nodePackageId ?? 'bitcoincashd'
-  const nodeHost = `${nodePackageId}.startos:8332`
 
   const mounts = sdk.Mounts.of()
     .mountVolume({
@@ -141,6 +140,17 @@ export const main = sdk.setupMain(async ({ effects }) => {
        echo "[fulcrum-start] Resuming existing index at $NETDIR"
      fi`,
   ])
+
+  // BCHN remaps its RPC port per network to avoid clashing with its own ZMQ ports.
+  // All other supported nodes (BCHD, Flowee, Knuth) listen on 8332 for every network.
+  const bitcoincashdRpcPorts: Record<string, number> = {
+    mainnet: 8332, testnet3: 18332, testnet4: 28342,
+    scalenet: 38332, chipnet: 48332, regtest: 18443,
+  }
+  const rpcPort = nodePackageId === 'bitcoincashd'
+    ? (bitcoincashdRpcPorts[nodeNetwork] ?? 8332)
+    : 8332
+  const nodeHost = `${nodePackageId}.startos:${rpcPort}`
 
   // Inject credentials and per-network datadir into fulcrum.conf before starting.
   // Each network gets its own subdirectory so mainnet/chipnet/testnet4 data never mixes.
