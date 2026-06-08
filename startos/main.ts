@@ -166,32 +166,34 @@ export const main = sdk.setupMain(async ({ effects }) => {
 
   let lastSyncLog: string | null = null
 
+  // Monitor BCHN's network in the background. If it switches, call effects.restart()
+  // which re-runs main.ts (not just the daemon), so fulcrum.conf gets rewritten with
+  // the new port/datadir. Exit code 1 from the daemon only restarts the daemon process
+  // and leaves the stale config in place, causing an infinite restart loop.
+  let netMonitorActive = true
+  ;(async () => {
+    while (netMonitorActive) {
+      await new Promise<void>(r => setTimeout(r, 15_000))
+      if (!netMonitorActive) break
+      try {
+        const s = await readNodeStore()
+        if (s?.network && s.network !== nodeNetwork) {
+          console.log(`[net-monitor] Node network changed ${nodeNetwork} -> ${s.network} — restarting service`)
+          netMonitorActive = false
+          await effects.restart()
+          return
+        }
+      } catch {}
+    }
+  })().catch(() => {})
+
   return sdk.Daemons.of(effects)
     .addDaemon('primary', {
       subcontainer: primarySub,
       exec: {
-        // Wrap Fulcrum in a shell that monitors the node's network every 15s.
-        // If the node switches networks, we exit (code 1) so StartOS restarts the
-        // container; on the next startup, main.ts re-reads store.json and opens the
-        // correct per-network datadir.
         command: [
           'sh', '-c',
-          [
-            `Fulcrum --ts-format none /data/fulcrum.conf &`,
-            `FPID=$!`,
-            `EXPECTED='${nodeNetwork}'`,
-            `while kill -0 "$FPID" 2>/dev/null; do`,
-            `  sleep 15`,
-            `  CURRENT=$(sed -n 's/.*"network"[[:space:]]*:[[:space:]]*"\\([^"]*\\)".*/\\1/p' /mnt/node/store.json 2>/dev/null)`,
-            `  if [ -n "$CURRENT" ] && [ "$CURRENT" != "$EXPECTED" ]; then`,
-            `    echo "[net-monitor] Node network changed from $EXPECTED to $CURRENT -- restarting Fulcrum on new network"`,
-            `    kill "$FPID" 2>/dev/null`,
-            `    wait "$FPID" 2>/dev/null`,
-            `    exit 1`,
-            `  fi`,
-            `done`,
-            `wait "$FPID"; exit $?`,
-          ].join('\n'),
+          'exec Fulcrum --ts-format none /data/fulcrum.conf',
         ],
         onStdout: (chunk) => {
           const text = Buffer.isBuffer(chunk)
