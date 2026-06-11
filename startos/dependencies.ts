@@ -1,6 +1,5 @@
 import { autoconfig as bchnAutoconfig } from 'bitcoin-cash-node-startos/startos/actions/config/autoconfig'
 import { autoconfig as bchdAutoconfig } from 'bitcoin-cash-daemon-startos/startos/actions/config/autoconfig'
-import { autoconfig as floweeAutoconfig } from 'flowee-startos/startos/actions/config/autoconfig'
 import { sdk } from './sdk'
 import { storeJson } from './file-models/store.json'
 
@@ -70,19 +69,8 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
   }
 
   if (nodePackageId === 'flowee') {
-    await sdk.action.createTask(effects, 'flowee', floweeAutoconfig, 'critical', {
-      input: {
-        kind: 'partial',
-        // @ts-ignore
-        value: {
-          rest: true,
-        },
-      },
-      reason:
-        'REST API must be enabled for Fulcrum to function properly.',
-      when: { condition: 'input-not-matches', once: false },
-    })
-
+    // Fulcrum connects to Flowee via JSON-RPC — no autoconfig needed.
+    // (REST API is required by BCH Explorer, not Fulcrum.)
     return {
       flowee: {
         kind: 'running',
