@@ -141,14 +141,20 @@ export const main = sdk.setupMain(async ({ effects }) => {
      fi`,
   ])
 
-  // Both BCHN and Flowee remap RPC port per network. BCHD and Knuth always use 8332.
+  // BCHN, Flowee, and BCHD all remap RPC port per network. Knuth always uses 8332.
   // Flowee uses 'testnet' while BCHN uses 'testnet3' for the same network — both covered.
+  // BCHD uses different port numbers than BCHN/Flowee (e.g. chipnet: 48334 vs 48332).
   const perNetworkRpcPorts: Record<string, number> = {
     mainnet: 8332, testnet3: 18332, testnet: 18332, testnet4: 28342,
     scalenet: 38332, chipnet: 48332, regtest: 18443,
   }
+  const bchdRpcPorts: Record<string, number> = {
+    mainnet: 8332, testnet3: 18332, chipnet: 48334, regtest: 18444,
+  }
   const rpcPort = (nodePackageId === 'bitcoincashd' || nodePackageId === 'flowee')
     ? (perNetworkRpcPorts[nodeNetwork] ?? 8332)
+    : nodePackageId === 'bchd'
+    ? (bchdRpcPorts[nodeNetwork] ?? 8332)
     : 8332
   const nodeHost = `${nodePackageId}.startos:${rpcPort}`
 
@@ -209,11 +215,12 @@ export const main = sdk.setupMain(async ({ effects }) => {
       ready: {
         display: 'Electrum',
         fn: async () => {
+          const backendLabel = nodeNetwork
           const result = await sdk.healthCheck.checkPortListening(
             effects,
             electrumPort,
             {
-              successMessage: 'The Electrum interface is ready',
+              successMessage: `Electrum ready — ${backendLabel}`,
               errorMessage: 'The Electrum interface is not ready',
             },
           )
@@ -233,11 +240,12 @@ export const main = sdk.setupMain(async ({ effects }) => {
       ready: {
         display: 'Sync Progress',
         fn: async () => {
+          const backendLabel = nodeNetwork
           const ready = await sdk.healthCheck.checkPortListening(
             effects,
             electrumPort,
             {
-              successMessage: 'Fulcrum BCH is fully synced',
+              successMessage: `Synced — ${backendLabel}`,
               errorMessage: '',
             },
           )
