@@ -84,8 +84,6 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
   if (nodePackageId === 'knuth-bch') {
     // Knuth v1.3.0+ exposes optional JSON-RPC (compile-time rpc=True + runtime
     // rpc.enabled). Force full DB mode + RPC on so Fulcrum can connect.
-    // Remaining method gaps (e.g. getnetworkinfo for handshake) tracked at
-    // k-nuth/kth#616 — Fulcrum may still fail until those land upstream.
     await sdk.action.createTask(
       effects,
       'knuth-bch',

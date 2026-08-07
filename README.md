@@ -193,7 +193,7 @@ The Electrum index is fully re-derivable from the connected BCH node. After rest
 3. The node backend must be changed via the **Select Node Backend action** — not by editing `fulcrum.conf` directly. The config file is overwritten on each start.
 4. RPC credentials are read **from the dependency volume** inside the SubContainer. They are not stored in Fulcrum's own `store.json`; they are always fetched fresh from the selected node.
 5. Re-indexing is triggered automatically when the selected node changes. This can take several hours.
-6. **Knuth** (v1.3.0+) exposes JSON-RPC and is a selectable backend. Fulcrum auto-enables RPC and full DB mode on Knuth. A few handshake methods (e.g. `getnetworkinfo`) are still missing upstream — tracked at [k-nuth/kth#616](https://github.com/k-nuth/kth/issues/616) — so Knuth may not fully index until those land.
+6. **Knuth** (v1.3.0+) exposes JSON-RPC and is a selectable backend. Fulcrum auto-enables RPC and full DB mode on Knuth.
 
 ---
 
