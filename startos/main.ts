@@ -141,9 +141,9 @@ export const main = sdk.setupMain(async ({ effects }) => {
      fi`,
   ])
 
-  // BCHN, Flowee, and BCHD all remap RPC port per network. Knuth always uses 8332.
-  // Flowee uses 'testnet' while BCHN uses 'testnet3' for the same network — both covered.
-  // BCHD uses different port numbers than BCHN/Flowee (e.g. chipnet: 48334 vs 48332).
+  // BCHN, Flowee, and Knuth remap RPC port per network (same table).
+  // Flowee uses 'testnet' while BCHN/Knuth use 'testnet3' — both covered.
+  // BCHD uses different port numbers (e.g. chipnet: 48334 vs 48332).
   const perNetworkRpcPorts: Record<string, number> = {
     mainnet: 8332, testnet3: 18332, testnet: 18332, testnet4: 28342,
     scalenet: 38332, chipnet: 48332, regtest: 18443,
@@ -151,11 +151,10 @@ export const main = sdk.setupMain(async ({ effects }) => {
   const bchdRpcPorts: Record<string, number> = {
     mainnet: 8332, testnet3: 18332, chipnet: 48334, regtest: 18444,
   }
-  const rpcPort = (nodePackageId === 'bitcoincashd' || nodePackageId === 'flowee')
-    ? (perNetworkRpcPorts[nodeNetwork] ?? 8332)
-    : nodePackageId === 'bchd'
-    ? (bchdRpcPorts[nodeNetwork] ?? 8332)
-    : 8332
+  const rpcPort =
+    nodePackageId === 'bchd'
+      ? (bchdRpcPorts[nodeNetwork] ?? 8332)
+      : (perNetworkRpcPorts[nodeNetwork] ?? 8332) // bitcoincashd | flowee | knuth-bch
   const nodeHost = `${nodePackageId}.startos:${rpcPort}`
 
   // Inject credentials and per-network datadir into fulcrum.conf before starting.

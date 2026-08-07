@@ -22,6 +22,9 @@ node backends on StartOS:
 
 - **Bitcoin Cash Node (BCHN)** — recommended. C++ implementation; fastest IBD.
 - **Bitcoin Cash Daemon (BCHD)** — Go implementation; also supported.
+- **Flowee the Hub** — supported via JSON-RPC.
+- **Knuth** (v1.3.0+) — JSON-RPC available; Fulcrum enables it automatically.
+  Some methods Fulcrum expects are still missing upstream (see k-nuth/kth#616).
 
 Select your node backend via **Actions → Select Node Backend**. Fulcrum reads
 the node's RPC credentials from the shared volume — no manual credential entry

@@ -1,5 +1,6 @@
 import { autoconfig as bchnAutoconfig } from 'bitcoin-cash-node-startos/startos/actions/config/autoconfig'
 import { autoconfig as bchdAutoconfig } from 'bitcoin-cash-daemon-startos/startos/actions/config/autoconfig'
+import { autoconfig as knuthAutoconfig } from 'knuth-bch-startos/startos/actions/config/autoconfig'
 import { sdk } from './sdk'
 import { storeJson } from './file-models/store.json'
 
@@ -81,15 +82,34 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
   }
 
   if (nodePackageId === 'knuth-bch') {
-    // Knuth does not expose JSON-RPC yet (upstream roadmap, port 8332,
-    // BCHN-compatible when shipped). We declare the dep so users can
-    // pre-select it; Fulcrum will fail at RPC handshake with a clear
-    // error until upstream RPC ships. No autoconfig task: there is
-    // nothing RPC-relevant to configure today.
+    // Knuth v1.3.0+ exposes optional JSON-RPC (compile-time rpc=True + runtime
+    // rpc.enabled). Force full DB mode + RPC on so Fulcrum can connect.
+    // Remaining method gaps (e.g. getnetworkinfo for handshake) tracked at
+    // k-nuth/kth#616 — Fulcrum may still fail until those land upstream.
+    await sdk.action.createTask(
+      effects,
+      'knuth-bch',
+      knuthAutoconfig,
+      'critical',
+      {
+        input: {
+          kind: 'partial',
+          // @ts-ignore
+          value: {
+            databaseMode: 'full',
+            rpcEnabled: true,
+          },
+        },
+        reason:
+          'JSON-RPC must be enabled and database mode set to Full for Fulcrum to index Knuth.',
+        when: { condition: 'input-not-matches', once: false },
+      },
+    )
+
     return {
       'knuth-bch': {
         kind: 'running',
-        versionRange: '>=0.80.0:0',
+        versionRange: '>=1.3.0:0',
         healthChecks: ['primary'],
       },
     } as any
