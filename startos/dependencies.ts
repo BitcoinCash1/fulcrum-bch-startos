@@ -48,8 +48,12 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
     await sdk.action.createTask(effects, 'bchd', bchdAutoconfig, 'critical', {
       input: {
         kind: 'partial',
-        // @ts-ignore
-        value: {
+        accept: [{
+          txindex: true,
+          prune: 0,
+          grpcEnabled: true,
+        }],
+          set: {
           txindex: true,
           prune: 0,
           grpcEnabled: true,
@@ -92,8 +96,11 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
       {
         input: {
           kind: 'partial',
-          // @ts-ignore
-          value: {
+          accept: [{
+            databaseMode: 'full',
+            rpcEnabled: true,
+          }],
+          set: {
             databaseMode: 'full',
             rpcEnabled: true,
           },
@@ -122,8 +129,11 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
     {
       input: {
         kind: 'partial',
-        // @ts-ignore
-        value: {
+        accept: [{
+          txindex: true,
+          zmqEnabled: true,
+        }],
+          set: {
           txindex: true,
           zmqEnabled: true,
         },

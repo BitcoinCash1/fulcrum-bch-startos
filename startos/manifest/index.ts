@@ -22,17 +22,6 @@ export const manifest = setupManifest({
       emulateMissingAs: 'x86_64',
     },
   },
-  alerts: {
-    install:
-      'Fulcrum requires a BCH full node (BCHN or BCHD) to be fully synced before it begins indexing. Initial indexing of the full BCH blockchain may take several hours.',
-    update: null,
-    uninstall:
-      'Uninstalling Fulcrum will permanently delete all index data. You will need to re-index from scratch if reinstalled.',
-    restore: null,
-    start:
-      'Fulcrum will not start until the selected BCH node is fully synced and running.',
-    stop: null,
-  },
   dependencies: {
     bitcoincashd: {
       description:
