@@ -17,7 +17,7 @@ export const manifest = setupManifest({
   volumes: ['main'],
   images: {
     main: {
-      source: { dockerTag: 'cculianu/fulcrum:v2.1.1' },
+      source: { dockerTag: 'cculianu/fulcrum:v2.1.2' },
       arch: ['x86_64', 'aarch64'],
       emulateMissingAs: 'x86_64',
     },

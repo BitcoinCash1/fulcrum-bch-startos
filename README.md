@@ -34,7 +34,7 @@
 | Field | Value |
 |---|---|
 | **Image ID** | `main` |
-| **Source** | `cculianu/fulcrum:v2.1.1` from Docker Hub |
+| **Source** | `cculianu/fulcrum:v2.1.2` from Docker Hub |
 | **Architectures** | `x86_64`, `aarch64` (aarch64 emulates as x86_64 if not natively available) |
 | **Command** | `Fulcrum --ts-format none /data/fulcrum.conf` |
 
@@ -66,7 +66,7 @@
 
 ## 3. Installation and First-Run Flow
 
-1. StartOS pulls the `cculianu/fulcrum:v2.1.1` image.
+1. StartOS pulls the `cculianu/fulcrum:v2.1.2` image.
 2. Seed files are written: `fulcrum.conf` and `store.json` with defaults (node: BCHN).
 3. On first start, Fulcrum reads the selected node's RPC credentials from `/mnt/node/store.json` inside the SubContainer.
 4. `fulcrum.conf` is updated with the node RPC endpoint, credentials, and TLS mode (TLS enabled automatically when BCHD is selected; plaintext for BCHN/Flowee).
@@ -222,7 +222,7 @@ upstream_repo: https://github.com/cculianu/Fulcrum
 package_repo: https://github.com/BitcoinCash1/fulcrum-bch-startos
 image:
   id: main
-  source: cculianu/fulcrum:v2.1.1 (Docker Hub)
+  source: cculianu/fulcrum:v2.1.2 (Docker Hub)
 architectures:
   - x86_64
   - aarch64
