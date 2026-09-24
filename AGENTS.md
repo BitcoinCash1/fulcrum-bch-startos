@@ -32,3 +32,33 @@ verified, tried, and decided belongs in the commit message and the PR body.
 - **BCHN does not export its host ids.** `bitcoin-cash-node-startos/startos/utils` exports `networkPorts` and the _interface_ ids but no `rpcHostId`, so the host id `'rpc'` is a literal in `startos/utils.ts`. Exporting it upstream would remove the literal.
 - **The chain follows the node and drives `datadir`.** `main` reads the chain off the node's read-only `/mnt/node` mount and points Fulcrum at `/data/<chain>`. A Fulcrum database refuses to open on a chain it was not built for, so these directories must never be merged. `NETWORKS` in `startos/utils.ts` is the single source for them — the backup excludes and the Delete Chain Index picker both derive from it, so adding a chain means adding it there.
 - **`fulcrum.conf` performance keys are deliberately optional.** Unset keys are omitted from the file so Fulcrum applies its own defaults; do not reintroduce `.catch(<number>)` defaults, which hard-code upstream's values into this package and go stale.
+
+## Repository conventions
+
+This repo is the original the Start9-Community copy is imported from. Keep it a
+near-replica of that copy: every difference must be one of those listed below.
+
+- **Syncing with Start9-Community:** `git merge` their `master` into ours, never
+  rebase or force-push. Take their side for packaging, layout, docs and CI;
+  keep only the deliberate differences below.
+- **Branches:** `master` is released — every push to it runs Tag and Release.
+  Work happens on short-lived branches and reaches `master` through a PR.
+  `next` is kept on purpose: Start9's Sync Next workflow mirrors `master` into
+  it, so do not delete it.
+- **Versions:** `<upstream>:<revision>` in the single `startos/versions/current.ts`.
+  Never change the upstream part by hand; a new upstream starts at `:0` (the
+  auto-bump PR does this). Bump the revision once per shipped package change —
+  not for docs, CI or archive changes. `ALLOW_DOWNGRADE` stays `false` unless a
+  release is known to be reversible.
+- **`assets/` vs `archive/`:** `assets/` is packed into the s9pk as a whole, so
+  it holds only `.gitkeep` unless the service reads a file at runtime.
+  `archive/` holds reference material (`ABOUT.md`, logos, picture variants) and
+  is not packed. Never delete anything in `archive/`.
+- **What StartOS shows:** name from `title` in `startos/manifest/index.ts`,
+  description and About text from `short`/`long` in `startos/manifest/i18n.ts`,
+  Instructions tab from `instructions.md` (required), logo from `icon.png`.
+- **Commit and PR hygiene:** no session links, `Co-Authored-By` trailers or
+  "Generated with" footers in commit messages, PR descriptions or comments.
+  The Session Link Guard workflow fails any PR or push that carries one.
+  Commits are authored by the maintainer.
+- **Deliberate differences from Start9-Community:** Knuth (`knuth-bch`) as a fourth node backend; `ALLOW_DOWNGRADE` in `current.ts`; `sdk.ts` and `i18n/index.ts` synced to the hello-world template; `check-upstream.yml` + `scripts/auto-bump.sh` (daily upstream check, opens a bump PR); `dependabot.yml`; `session-link-guard.yml`; `archive/`; the matching README/instructions notes.
