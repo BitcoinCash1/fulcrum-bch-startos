@@ -1,7 +1,4 @@
 {
   "extends": "@start9labs/start-sdk/tsconfig.base.json",
-  "compilerOptions": {
-    "skipLibCheck": true
-  },
-  "include": ["startos/**/*.ts"]
+  "include": ["startos/**/*.ts", "node_modules/**/startos"]
 }
