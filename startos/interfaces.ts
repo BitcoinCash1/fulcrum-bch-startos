@@ -1,9 +1,13 @@
+import { i18n } from './i18n'
 import { sdk } from './sdk'
-import { electrumPort, electrumInterfaceId } from './utils'
+import { electrumHostId, electrumInterfaceId, electrumPort } from './utils'
 
 export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
-  const electrumMulti = sdk.MultiHost.of(effects, 'main')
-  const electrumOrigin = await electrumMulti.bindPort(electrumPort, {
+  const multiHost = sdk.MultiHost.of(effects, electrumHostId)
+  // Plaintext only. BCH Explorer reads this binding's bridge address without
+  // asking for a scheme, so publishing a TLS address alongside it would leave
+  // which of the two it dials undefined.
+  const electrumOrigin = await multiHost.bindPort(electrumPort, {
     protocol: null,
     preferredExternalPort: electrumPort,
     secure: { ssl: false },
@@ -11,10 +15,11 @@ export const setInterfaces = sdk.setupInterfaces(async ({ effects }) => {
   })
 
   const electrum = sdk.createInterface(effects, {
-    name: 'Electrum Interface',
     id: electrumInterfaceId,
-    description:
-      'Serves the Electrum protocol for BCH wallets and the BCH Explorer',
+    name: i18n('Electrum'),
+    description: i18n(
+      'Serves the Electrum protocol to Bitcoin Cash wallets and to BCH Explorer',
+    ),
     type: 'api',
     masked: false,
     schemeOverride: null,
