@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
-# Bump the package to a new upstream Fulcrum release and open a pull request.
+# Bump the package to a new upstream Fulcrum release, commit it to master and
+# release it.
 #
 #   scripts/auto-bump.sh <upstream-tag>      e.g. scripts/auto-bump.sh v2.1.3
 #
 # Sets startos/versions/current.ts to `<upstream>:0` (a new upstream always
 # starts at package revision 0), resets ALLOW_DOWNGRADE to false, updates the
-# image tag in the manifest, then commits on `auto-bump/<tag>` and opens a PR
-# against master. Merging the PR is what releases it.
+# image tag in the manifest, then commits the bump to master; Check Upstream
+# then dispatches Tag and Release.
 #
-# DRY_RUN=1 edits and commits locally but skips the push and the PR.
+# DRY_RUN=1 edits and commits locally but skips the push.
 set -euo pipefail
 
 TAG="${1:-}"
@@ -26,6 +27,12 @@ if [ "$CURRENT_UPSTREAM" = "$UPSTREAM" ]; then
   echo "Already at $UPSTREAM — no bump needed"
   exit 0
 fi
+# Never move the version downwards: StartOS cannot migrate to a lower upstream.
+HIGHEST=$(printf '%s\n%s\n' "$CURRENT_UPSTREAM" "$UPSTREAM" | sort -V | tail -1)
+if [ "$HIGHEST" = "$CURRENT_UPSTREAM" ]; then
+  echo "::warning::Tag $TAG is older than the packaged version $CURRENT_UPSTREAM — refusing to downgrade"
+  exit 0
+fi
 NEW_VERSION="${UPSTREAM}:0"
 echo "Bumping $CURRENT_VERSION -> $NEW_VERSION"
 
@@ -35,7 +42,7 @@ path, new_version, upstream = sys.argv[1:]
 src = open(path).read()
 src, n = re.subn(r"(\n\s*version:\s*)'[^']+'", rf"\g<1>'{new_version}'", src, count=1)
 assert n == 1, 'version line not found'
-# Release notes are rewritten for review in the PR; translations are added there.
+# The release notes are a placeholder; translations are added by hand afterwards.
 src, n = re.subn(
     r"releaseNotes:\s*(\{.*?\n  \}|'[^']*'|`[^`]*`),",
     "releaseNotes: {\n    en_US: 'Updates Fulcrum to upstream " + upstream + ".',\n  },",
@@ -47,19 +54,14 @@ PY
 
 sed -i -E "s|cculianu/fulcrum:v[0-9][^']*|cculianu/fulcrum:v${UPSTREAM}|" "$MANIFEST"
 
-BRANCH="auto-bump/v${UPSTREAM}"
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
-git checkout -b "$BRANCH"
 git add "$CURRENT_FILE" "$MANIFEST"
 git commit -m "feat: bump Fulcrum to upstream v${UPSTREAM} (${NEW_VERSION})"
 
 if [ "${DRY_RUN:-0}" = "1" ]; then
-  echo "DRY_RUN: committed on $BRANCH, not pushed"
+  echo "DRY_RUN: committed on master, not pushed"
   exit 0
 fi
 
-git push origin "$BRANCH"
-gh pr create --base master --head "$BRANCH" \
-  --title "Bump Fulcrum to upstream v${UPSTREAM} (${NEW_VERSION})" \
-  --body "Automated bump to upstream Fulcrum v${UPSTREAM}. Review the release notes (add translations) before merging; merging releases ${NEW_VERSION}."
+git push origin master

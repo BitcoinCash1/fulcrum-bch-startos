@@ -205,7 +205,7 @@ The Flowee credential is in the backup, so a restored install still authenticate
 
 ## Upstream Updates
 
-`check-upstream.yml` looks for a new Fulcrum release daily. When one appears, `scripts/auto-bump.sh` sets `startos/versions/current.ts` to `<upstream>:0`, resets `ALLOW_DOWNGRADE` to `false`, updates the image tag in the manifest, and opens a pull request from `auto-bump/<tag>`. Nothing reaches `master` until that PR is reviewed and merged; merging it is what releases the new version. Package-only fixes bump the revision after the colon by hand in their own PR.
+`check-upstream.yml` looks for a new Fulcrum release daily. When one appears, `scripts/auto-bump.sh` sets `startos/versions/current.ts` to `<upstream>:0`, resets `ALLOW_DOWNGRADE` to `false`, updates the image tag in the manifest, commits the bump straight to `master`, and the workflow dispatches Tag and Release, which builds and publishes the new version. Package-only fixes bump the revision after the colon by hand.
 
 ## Quick Reference for AI Consumers
 
