@@ -60,5 +60,7 @@ near-replica of that copy: every difference must be one of those listed below.
 - **Commit and PR hygiene:** no session links, `Co-Authored-By` trailers or
   "Generated with" footers in commit messages, PR descriptions or comments.
   The Session Link Guard workflow fails any PR or push that carries one.
-  Commits are authored by the maintainer.
+  Commits are authored by the maintainer, and all repository text (code
+  comments, docs, commit messages, PR text) is written in the maintainer's
+  voice, without naming the tools used to produce it.
 - **Deliberate differences from Start9-Community:** Knuth (`knuth-bch`) as a fourth node backend; `ALLOW_DOWNGRADE` in `current.ts`; `sdk.ts` and `i18n/index.ts` synced to the hello-world template; `check-upstream.yml` + `scripts/auto-bump.sh` (daily upstream check, opens a bump PR); `dependabot.yml`; `session-link-guard.yml`; `archive/`; the matching README/instructions notes.
