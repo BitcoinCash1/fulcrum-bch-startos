@@ -123,9 +123,7 @@ export const setDependencies = sdk.setupDependencies(async ({ effects }) => {
       id: 'knuth-bch',
       kind: 'running',
       versionRange: '>=1.3.0:0',
-      // Knuth's JSON-RPC port is served by its `rpc-compat` daemon, which is
-      // the binding Fulcrum dials.
-      healthChecks: ['rpc-compat'],
+      healthChecks: ['primary'],
     },
   }
 
