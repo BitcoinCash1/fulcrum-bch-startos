@@ -1,55 +1,65 @@
 #!/usr/bin/env bash
+# Bump the package to a new upstream Fulcrum release and open a pull request.
+#
+#   scripts/auto-bump.sh <upstream-tag>      e.g. scripts/auto-bump.sh v2.1.3
+#
+# Sets startos/versions/current.ts to `<upstream>:0` (a new upstream always
+# starts at package revision 0), resets ALLOW_DOWNGRADE to false, updates the
+# image tag in the manifest, then commits on `auto-bump/<tag>` and opens a PR
+# against master. Merging the PR is what releases it.
+#
+# DRY_RUN=1 edits and commits locally but skips the push and the PR.
 set -euo pipefail
 
-DISPATCHED_TAG="${1:-}"
-if [ -z "$DISPATCHED_TAG" ]; then
-  echo "Usage: $0 <tag>" >&2
+TAG="${1:-}"
+if [ -z "$TAG" ]; then
+  echo "Usage: $0 <upstream-tag>" >&2
   exit 1
 fi
+UPSTREAM="${TAG#v}"
+CURRENT_FILE=startos/versions/current.ts
+MANIFEST=startos/manifest/index.ts
 
-CLEAN_TAG="${DISPATCHED_TAG#v}"
-
-CURRENT_VAR=$(grep -E '^[[:space:]]*current:' startos/versions/index.ts | head -1 \
-  | sed -E 's/.*current:[[:space:]]*([A-Za-z0-9_]+).*/\1/')
-VERSION_FILE_BASE=$(echo "$CURRENT_VAR" | sed -E 's/^v_//; s/_/./g')
-CURRENT_VERSION=$(grep -E "version:[[:space:]]*'" "startos/versions/v${VERSION_FILE_BASE}.ts" \
-  | head -1 | sed -E "s/.*version:[[:space:]]*'([^']+)'.*/\1/")
+CURRENT_VERSION=$(sed -nE "s/^[[:space:]]*version:[[:space:]]*'([^']+)'.*/\1/p" "$CURRENT_FILE" | head -1)
 CURRENT_UPSTREAM="${CURRENT_VERSION%%:*}"
-
-if [ "$CURRENT_UPSTREAM" = "$CLEAN_TAG" ]; then
-  echo "Already at $CLEAN_TAG — no bump needed"
+if [ "$CURRENT_UPSTREAM" = "$UPSTREAM" ]; then
+  echo "Already at $UPSTREAM — no bump needed"
   exit 0
 fi
-echo "Bumping $CURRENT_UPSTREAM -> $CLEAN_TAG"
+NEW_VERSION="${UPSTREAM}:0"
+echo "Bumping $CURRENT_VERSION -> $NEW_VERSION"
 
-TAG_VAR="v_$(echo "$CLEAN_TAG" | tr '.' '_')_0"
-NEW_VERSION="${CLEAN_TAG}:0"
-NEW_FILE="startos/versions/v${CLEAN_TAG}.0.ts"
+python3 - "$CURRENT_FILE" "$NEW_VERSION" "$UPSTREAM" <<'PY'
+import re, sys
+path, new_version, upstream = sys.argv[1:]
+src = open(path).read()
+src, n = re.subn(r"(\n\s*version:\s*)'[^']+'", rf"\g<1>'{new_version}'", src, count=1)
+assert n == 1, 'version line not found'
+# Release notes are rewritten for review in the PR; translations are added there.
+src, n = re.subn(
+    r"releaseNotes:\s*(\{.*?\n  \}|'[^']*'|`[^`]*`),",
+    "releaseNotes: {\n    en_US: 'Updates Fulcrum to upstream " + upstream + ".',\n  },",
+    src, count=1, flags=re.S)
+assert n == 1, 'releaseNotes not found'
+src = re.sub(r"const ALLOW_DOWNGRADE = (true|false)", "const ALLOW_DOWNGRADE = false", src)
+open(path, 'w').write(src)
+PY
 
-cat > "$NEW_FILE" <<EOF
-import { VersionInfo } from '@start9labs/start-sdk'
+sed -i -E "s|cculianu/fulcrum:v[0-9][^']*|cculianu/fulcrum:v${UPSTREAM}|" "$MANIFEST"
 
-export const ${TAG_VAR} = VersionInfo.of({
-  version: '${NEW_VERSION}',
-  releaseNotes: 'Upstream ${DISPATCHED_TAG}.',
-  migrations: {
-    up: async () => {},
-    down: async () => {},
-  },
-})
-EOF
-
-sed -i "s|cculianu/fulcrum:v${CURRENT_UPSTREAM}|cculianu/fulcrum:v${CLEAN_TAG}|g" \
-  startos/manifest/index.ts
-sed -i "s|v${CURRENT_UPSTREAM}|v${CLEAN_TAG}|g" README.md 2>/dev/null || true
-
-sed -i "1a import { ${TAG_VAR} } from './v${CLEAN_TAG}.0'" startos/versions/index.ts
-sed -i "s/current: ${CURRENT_VAR}/current: ${TAG_VAR}/" startos/versions/index.ts
-sed -i "s/other: \[/other: [${CURRENT_VAR}, /" startos/versions/index.ts
-
+BRANCH="auto-bump/v${UPSTREAM}"
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
-git add startos/versions/index.ts "$NEW_FILE" startos/manifest/index.ts README.md
-git commit -m "feat: auto-bump to upstream ${DISPATCHED_TAG} (v${NEW_VERSION})"
-git push origin master
-echo "Version bump committed"
+git checkout -b "$BRANCH"
+git add "$CURRENT_FILE" "$MANIFEST"
+git commit -m "feat: bump Fulcrum to upstream v${UPSTREAM} (${NEW_VERSION})"
+
+if [ "${DRY_RUN:-0}" = "1" ]; then
+  echo "DRY_RUN: committed on $BRANCH, not pushed"
+  exit 0
+fi
+
+git push origin "$BRANCH"
+gh pr create --base master --head "$BRANCH" \
+  --title "Bump Fulcrum to upstream v${UPSTREAM} (${NEW_VERSION})" \
+  --body "Automated bump to upstream Fulcrum v${UPSTREAM}. Review the release notes (add translations) before merging; merging releases ${NEW_VERSION}."

@@ -1,17 +1,30 @@
 # Updating the upstream version
 
-This package wraps the **Fulcrum** Docker image published by `cculianu` on Docker Hub.
-Upstream releases live at [github.com/cculianu/Fulcrum](https://github.com/cculianu/Fulcrum/releases).
+Fulcrum is shipped as a prebuilt Docker image; the upstream project and the published image share the same version tag.
 
 ## Determining the upstream version
 
-Check the latest tag on the [releases page](https://github.com/cculianu/Fulcrum/releases) and confirm the matching image tag exists on [Docker Hub](https://hub.docker.com/r/cculianu/fulcrum/tags).
+[cculianu/Fulcrum](https://github.com/cculianu/Fulcrum) — latest GitHub release:
 
-The current pin lives in `startos/manifest/index.ts` at `images['fulcrum'].source.dockerTag`
-(e.g. `cculianu/fulcrum:v2.1.1`).
+```sh
+gh release view -R cculianu/Fulcrum --json tagName -q .tagName
+```
+
+Cross-check against the [`cculianu/fulcrum`](https://hub.docker.com/r/cculianu/fulcrum/tags) Docker Hub tags (the image must be published before the bump can land):
+
+```sh
+curl -fsSL "https://hub.docker.com/v2/repositories/cculianu/fulcrum/tags?page_size=20&ordering=last_updated" | jq -r '.results[].name'
+```
+
+The pinned tag lives in `startos/manifest/index.ts` at `images.main.source.dockerTag`.
 
 ## Applying the bump
 
-1. Bump `dockerTag` in `startos/manifest/index.ts` to `cculianu/fulcrum:v<new version>`.
-2. Add a new `startos/versions/v<X>.<Y>.<Z>.0.ts` file and update `startos/versions/index.ts` to set it as `current`.
-3. Update version references in `README.md` and `instructions.md`.
+1. In `startos/manifest/index.ts`, set `images.main.source.dockerTag` to `cculianu/fulcrum:v<new version>`.
+2. In `startos/versions/current.ts`, set `version` to `<new version>:0` and rewrite `releaseNotes` for all five locales.
+
+## What to re-check on a bump
+
+- **`fulcrum.conf` keys.** The package writes `datadir`, `bitcoind`, `rpcuser`, `rpcpassword`, `tcp`, `peering`, `announce` and `banner`, and merges the user's tuning keys. If upstream renames or retires one, `startos/fileModels/fulcrum.conf.ts` has to follow, and a retired key needs a `z.undefined()` entry to be cleaned off existing installs.
+- **The sync-progress log prefix.** `main.ts` scrapes Fulcrum's `<Controller>` stdout lines for the health check message. A change to that prefix silently leaves the check reporting "Unknown status".
+- **The node requirements.** Upstream's README states Fulcrum needs an unpruned node with `txindex` enabled. `startos/dependencies.ts` raises the autoconfig tasks that satisfy exactly that; if upstream's requirements change, those tasks and the README's "What Is Unchanged" section change with them.

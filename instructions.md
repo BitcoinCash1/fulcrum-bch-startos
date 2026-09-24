@@ -1,88 +1,40 @@
-# Fulcrum BCH Electrum Server
+# Fulcrum BCH
 
-Fulcrum is a fast, SPV-compatible Electrum server for Bitcoin Cash. The StartOS package is called "Fulcrum BCH" to distinguish it from the Bitcoin version. It indexes
-every address and transaction on the BCH chain and serves wallet queries over the
-Electrum protocol. This page covers what is specific to running it on StartOS.
+Fulcrum indexes a Bitcoin Cash chain from a full node, so a node has to be installed and fully synced before Fulcrum is of any use. Pick that node first — Fulcrum asks you to as soon as it installs — because switching later means building the index again.
+
+## Documentation
+
+- [Fulcrum upstream repository](https://github.com/cculianu/Fulcrum) — the README and configuration reference for the server this package runs.
 
 ## What you get on StartOS
 
-- An **Electrum server** that any standard BCH Electron Cash wallet or Electrum client
-  can connect to directly from your LAN (or over Tor if you expose an onion address).
-- **Address and transaction history lookups** — the Electrum protocol serves full
-  history for any address, confirmed or unconfirmed, without the wallet revealing
-  which addresses it owns to a third party.
-- **Input to BCH Explorer** — BCH Explorer uses Fulcrum as its address-lookup and
-  transaction-history backend.
-- A single **Electrum interface** on port 50001 (plain TCP).
+- **An Electrum server for your own wallets.** Point Electron Cash, or any other Electrum-protocol wallet, at it and your addresses are queried against hardware you own instead of a stranger's server.
+- **The backend BCH Explorer reads from.** If you run BCH Explorer, it gets address and transaction history from here.
+- **One index per chain.** Fulcrum keeps a separate index for mainnet, chipnet, testnet and the rest, so moving your node between chains never throws away work you have already done.
 
-## Prerequisites
+## Getting set up
 
-Fulcrum requires a running and fully-synced Bitcoin Cash full node. Supported
-node backends on StartOS:
+1. **Install a Bitcoin Cash node and let it finish syncing.** Bitcoin Cash Node, Bitcoin Cash Daemon, Flowee the Hub and Knuth all work.
+2. **Answer the Select Node Backend prompt** that Fulcrum raises after install, choosing the node you installed.
+3. **Answer the prompt that then appears on the node.** For Bitcoin Cash Node and Bitcoin Cash Daemon it turns on the full transaction index and turns pruning off, which Fulcrum needs. For Flowee it registers the login Fulcrum will use. For Knuth it turns JSON-RPC on and sets the full database mode.
+4. **Start Fulcrum.** It begins indexing immediately. A full mainnet index takes several hours — the **Sync Progress** health check reports how far along it is, and you will get a notification when it finishes.
 
-- **Bitcoin Cash Node (BCHN)** — recommended. C++ implementation; fastest IBD.
-- **Bitcoin Cash Daemon (BCHD)** — Go implementation; also supported.
-- **Flowee the Hub** — supported via JSON-RPC.
-- **Knuth** (v1.3.0+) — JSON-RPC available; Fulcrum enables it automatically.
-  Integration depends on Knuth JSON-RPC being enabled (full DB mode).
+Fulcrum will not accept wallet connections until the index has caught up.
 
-Select your node backend via **Actions → Select Node Backend**. Fulcrum reads
-the node's RPC credentials from the shared volume — no manual credential entry
-is needed.
+## Using Fulcrum BCH
 
-**Important:** Fulcrum cannot begin indexing until the BCH node it depends on has
-finished its own Initial Block Download. The health check will show a `loading`
-state until IBD is complete and Fulcrum finishes its own initial indexing pass.
+### Connecting a wallet
 
-## Getting started
+Fulcrum serves the Electrum protocol on the **Electrum** interface. Copy its address from the Dashboard and give it to your wallet as a server, keeping the port that comes with it.
 
-1. Install a Bitcoin Cash full node (BCHN or BCHD) and let it fully sync.
-2. Install Fulcrum. It detects the node backend automatically from the dependency.
-3. Fulcrum begins its initial index pass — this takes several hours for the full BCH
-   chain. Watch progress on the **Dashboard**.
-4. Once indexed, connect your wallets (see below).
+The interface is plaintext TCP — if your wallet insists on encryption, or you are connecting from outside your LAN, use the Tor address instead.
 
-## Connecting wallets
+### Actions
 
-Point **Electron Cash** or any Electrum-compatible BCH wallet to:
-
-| Field   | Value                                  |
-|---------|----------------------------------------|
-| Server  | `<your-startos-lan-address>`           |
-| Port    | `50001`                                |
-| Protocol| TCP (no SSL — plain Electrum)          |
-
-In Electron Cash: **Tools → Network → Server tab** → uncheck "Select server
-automatically" → enter your StartOS LAN address and port 50001.
-
-Over Tor: expose an onion address via **Interfaces → Electrum Interface → Add Onion
-Service** in StartOS and connect the wallet to `<your.onion>:50001`.
-
-## Connecting to BCH Explorer
-
-BCH Explorer automatically uses Fulcrum when both are installed. No configuration
-is needed — the dependency is wired at install time.
-
-## Port
-
-| Port  | Protocol | Purpose                        |
-|-------|----------|--------------------------------|
-| 50001 | TCP      | Electrum protocol (plain text) |
-
-SSL (port 50002) is not currently exposed — the StartOS interface layer handles
-TLS termination for external access if needed.
+- **Select Node Backend** — change which node Fulcrum indexes from. Fulcrum restarts against the new node; if that node is on a different chain, the index for that chain is built from scratch.
+- **Configure** — set the banner your Electrum clients see on connect, and tune Fulcrum's RPC timeout, RPC client count, worker threads, database memory and open-file limit. Leave a field empty to let Fulcrum choose for itself.
+- **Delete Chain Index** — free the disk one chain's index is using. Fulcrum has to be stopped first, because it holds the database open while it runs. The index is rebuilt the next time Fulcrum runs on that chain.
 
 ## Limitations
 
-- Fulcrum's index database is not included in backups. After a restore, Fulcrum
-  re-indexes the full chain from the node — this takes the same time as the original
-  index pass.
-- Fulcrum cannot start indexing until the BCH node dependency is fully synced.
-  Plan for both IBD time (node) and index time (Fulcrum) before the service is usable.
-- Only one node backend can be active at a time. Switch backends via
-  **Actions → Select Node Backend**; Fulcrum restarts and reconnects automatically.
-
-## Support
-
-- Package: <https://github.com/BitcoinCash1/fulcrum-bch-startos>
-- Upstream: <https://github.com/cculianu/Fulcrum>
+- **Backups do not include the index.** Your settings, banner and node choice are restored; the index is rebuilt from your node, which takes as long as the first one did.

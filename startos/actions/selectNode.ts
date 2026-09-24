@@ -1,57 +1,85 @@
+import { createDependentCredential } from 'flowee-startos/startos/actions/credentials/dependentCredential'
+import { storeJson } from '../fileModels/store.json'
+import { i18n } from '../i18n'
 import { sdk } from '../sdk'
-import { storeJson } from '../file-models/store.json'
 
 const { InputSpec, Value } = sdk
-
-const nodeInputSpec = InputSpec.of({
-  nodePackageId: Value.select({
-    name: 'Node Backend',
-    description: 'Select which BCH full node Fulcrum should connect to.',
-    default: 'bitcoincashd',
-    values: {
-      bitcoincashd: 'Bitcoin Cash Node (BCHN)',
-      bchd: 'Bitcoin Cash Daemon (BCHD)',
-      flowee: 'Flowee the Hub',
-      'knuth-bch': 'Knuth',
-    },
-  }),
-})
 
 export const selectNode = sdk.Action.withInput(
   'select-node',
 
-  {
-    name: 'Select Node Backend',
-    description:
-      'Choose which BCH node package Fulcrum should use for blockchain RPC.',
-    warning:
-      'Changing the node package may require dependency reconfiguration and service restart.',
+  async () => ({
+    name: i18n('Select Node Backend'),
+    description: i18n(
+      'Choose which Bitcoin Cash node Fulcrum indexes the chain from.',
+    ),
+    warning: i18n(
+      'Fulcrum restarts against the new node. If it is on a different chain, the index for that chain is built from scratch, which takes a while.',
+    ),
     allowedStatuses: 'any',
     group: null,
     visibility: 'enabled',
-  },
+  }),
 
-  nodeInputSpec,
+  InputSpec.of({
+    nodePackageId: Value.select({
+      name: i18n('Node Backend'),
+      description: i18n(
+        'The node must be installed and fully synced before Fulcrum can index from it.',
+      ),
+      default: 'bitcoincashd',
+      values: {
+        bitcoincashd: i18n('Bitcoin Cash Node'),
+        bchd: i18n('Bitcoin Cash Daemon'),
+        flowee: i18n('Flowee the Hub'),
+        'knuth-bch': i18n('Knuth'),
+      },
+    }),
+  }),
 
-  async ({ effects }) => {
-    const store = await storeJson.read().once()
-    const nodePackageId = store?.nodePackageId ?? 'bitcoincashd'
-    return {
-      nodePackageId: nodePackageId as 'bitcoincashd' | 'bchd' | 'flowee' | 'knuth-bch',
-    }
-  },
+  async () => ({
+    nodePackageId:
+      (await storeJson.read().once())?.nodePackageId ?? 'bitcoincashd',
+  }),
 
   async ({ effects, input }) => {
-    const previous = await storeJson.read().once()
-    const changed = previous?.nodePackageId !== input.nodePackageId
-
+    // `main` reads this selection through a `.const()`, so writing it here is
+    // what restarts Fulcrum against the new node.
     await storeJson.merge(effects, {
       nodePackageId: input.nodePackageId,
       nodeConfirmed: true,
     })
 
-    if (changed) {
-      await effects.restart()
-    }
+    if (input.nodePackageId !== 'flowee') return
+
+    // Flowee keeps only a hash of each RPC password and cannot hand one back,
+    // so the credential Fulcrum dials it with is minted here and has to be
+    // registered there. Raised on selection rather than from
+    // `setupDependencies`, which re-runs on every init and would keep asking.
+    const store = await storeJson.read().once()
+    await sdk.action.createTask(
+      effects,
+      'flowee',
+      createDependentCredential,
+      'critical',
+      {
+        input: {
+          kind: 'partial',
+          accept: [
+            {
+              username: store?.floweeRpcUser,
+              password: store?.floweeRpcPassword,
+            },
+          ],
+          set: {
+            username: store?.floweeRpcUser,
+            password: store?.floweeRpcPassword,
+          },
+        },
+        reason: i18n(
+          'Flowee needs an RPC credential registered for Fulcrum to log in with',
+        ),
+      },
+    )
   },
 )
