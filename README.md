@@ -91,7 +91,7 @@ Four are declared, and **exactly one is required at a time** — whichever node 
 | Bitcoin Cash Node   | `primary`             | Its RPC                                                                                                                        |
 | Bitcoin Cash Daemon | `rpc-plaintext`       | It serves RPC over its own self-signed TLS, so the package dials its plaintext proxy instead — that proxy is what has to be up |
 | Flowee the Hub      | `primary`             | Its RPC                                                                                                                        |
-| Knuth               | `rpc-compat`          | Its JSON-RPC is served by this sidecar daemon, so that is the binding that has to be up                                        |
+| Knuth               | `primary`             | Its RPC                                                                                                                        |
 
 **None of them gate on the node's sync progress, deliberately.** Fulcrum indexes to whatever height the node has reached and follows it from there, so requiring a fully-synced node would keep this service unstartable — and its own progress unreadable — for the days a fresh chain takes.
 
@@ -228,7 +228,7 @@ dependencies: # exactly one is required, whichever is selected
   - bitcoincashd # health check: primary
   - bchd # health check: rpc-plaintext, not the native TLS RPC
   - flowee # health check: primary
-  - knuth-bch # health check: rpc-compat, the sidecar that serves its JSON-RPC
+  - knuth-bch # health check: primary
 interfaces:
   electrum: { type: api, port: 50001 } # plaintext only, no TLS leg
 actions:
